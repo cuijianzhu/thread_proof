@@ -19,5 +19,6 @@ Fatigue::Fatigue(QObject *parent) :
     if (counter > 0) {
         float average = total / counter;
         qDebug() << "The average for this segment is " << average;
+        emit new_average(average);
     }
 }

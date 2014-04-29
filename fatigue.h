@@ -13,6 +13,7 @@ public:
     void calculate(QList<int> segment);
 
 signals:
+    void new_average(float average);
 
 public slots:
 

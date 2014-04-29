@@ -44,6 +44,7 @@ void *Tobii::write(void *arg)
     while(needQuit(&args->mt) == 0) {
         *&args->data_list += i;
         i++;
+        usleep(33);
       //  qDebug() << "Writing see the data list as " << args->data_list.size() << "in size.";
     }
     return 0;

@@ -26,6 +26,8 @@ private slots:
 
     void on_btnStop_clicked();
 
+    void display_new_average(float average);
+
 signals:
     void send_segment(QList<int> segment);
 
