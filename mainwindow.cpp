@@ -8,9 +8,9 @@ MainWindow::MainWindow(QWidget *parent) :
 {
     ui->setupUi(this);
     Tobii device;
-    Fatigue factor;
+ //   Fatigue factor;
 
-    connect(*factor, SIGNAL(new_average(float)), this, SLOT(display_new_average(float)), Qt::DirectConnection);
+    connect(&factor, SIGNAL(new_average(float)), this, SLOT(display_new_average(float)), Qt::DirectConnection);
 }
 
 MainWindow::~MainWindow()

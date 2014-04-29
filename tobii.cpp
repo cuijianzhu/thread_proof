@@ -44,8 +44,8 @@ void *Tobii::write(void *arg)
     while(needQuit(&args->mt) == 0) {
         *&args->data_list += i;
         i++;
-        usleep(33);
-      //  qDebug() << "Writing see the data list as " << args->data_list.size() << "in size.";
+        usleep(34000);
+ //       qDebug() << "Writing see the data list as " << args->data_list.size() << "in size.";
     }
     return 0;
 }
@@ -55,15 +55,15 @@ void *Tobii::read(void *arg)
    struct stuff *args = (struct stuff *)arg;
    QList<int> segment;
    while(needQuit(&args->mt) == 0) {
-       if (!args->data_list.isEmpty() && segment.size() < 30) {
+       while (!args->data_list.isEmpty() && segment.size() < 30) {
            segment += args->data_list.takeFirst();
+
+           if (segment.size() == 30) {
+               args->fatigue->calculate(segment);
+               segment.clear();
+           }
        }
       // qDebug() << "Reading see the segment as " << segment.size() << "in size.";
-
-       if (segment.size() == 30) {
-           args->fatigue->calculate(segment);
-           segment.clear();
-       }
    }
    return 0;
 }
