@@ -22,3 +22,8 @@ HEADERS  += mainwindow.h \
     fatigue.h
 
 FORMS    += mainwindow.ui
+
+unix:!macx: LIBS += -L$$PWD/../LUCI-App/TobiiGazeSdk-CApi-4.0.0.584-linux64/lib/ -ltobiigazecore
+
+INCLUDEPATH += $$PWD/../LUCI-App/TobiiGazeSdk-CApi-4.0.0.584-linux64/include
+DEPENDPATH += $$PWD/../LUCI-App/TobiiGazeSdk-CApi-4.0.0.584-linux64/include

@@ -17,19 +17,20 @@ public:
     explicit MainWindow(QWidget *parent = 0);
     ~MainWindow();
 
-protected:
     Tobii device;
-    Fatigue factor;
+    Fatigue risk;
+
+protected:
+
 
 private slots:
     void on_btnStart_clicked();
 
     void on_btnStop_clicked();
 
-    void display_new_average(float average);
+    void change_factor(int value);
 
 signals:
-    void send_segment(QList<int> segment);
 
 private:
     Ui::MainWindow *ui;

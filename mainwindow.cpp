@@ -7,10 +7,8 @@ MainWindow::MainWindow(QWidget *parent) :
     ui(new Ui::MainWindow)
 {
     ui->setupUi(this);
-    Tobii device;
- //   Fatigue factor;
 
-    connect(&factor, SIGNAL(new_average(float)), this, SLOT(display_new_average(float)), Qt::DirectConnection);
+    connect(&risk, SIGNAL(factor_changed(int)), this, SLOT(change_factor(int)), Qt::DirectConnection);
 }
 
 MainWindow::~MainWindow()
@@ -21,16 +19,18 @@ MainWindow::~MainWindow()
 void MainWindow::on_btnStart_clicked()
 {
     qDebug() << "Start Button Pushed";
-    device.start(factor);
-}
 
-void MainWindow::display_new_average(float average)
-{
-    ui->lblAverage->setText(QString::number(average));
+    device.start(&risk);
 }
 
 void MainWindow::on_btnStop_clicked()
 {
     qDebug() << "Stop Button Pushed";
     device.stop();
+}
+
+void MainWindow::change_factor(int value)
+{
+    qDebug() << "Something was emited for you.";
+    ui->lblAverage->setText(QString::number(value));
 }

@@ -1,31 +1,41 @@
 #include <QDebug>
 
 #include "tobii.h"
-#include "pthread.h"
-#include <errno.h>
 
 Tobii::Tobii(QObject *parent) :
     QObject(parent)
 {
     pthread_t th;
-    pthread_mutex_t mxq; /* mutex used as quit flag */
-    QList<int> treadmill;
+    QList<float> treadmill;
 
     struct stuff things;
-    things.mt = mxq;
     things.data_list = treadmill;
 }
 
-void Tobii::start(Fatigue &factor)
+void Tobii::start(Fatigue *factor)
 {
     qDebug() << "Start the device.";
 
-    things.fatigue = &factor;
+    things.fatigue = factor;
 
-    pthread_mutex_init(&things.mt,NULL);
-    pthread_mutex_lock(&things.mt);
+    const int urlSize = 256;
+    char url[urlSize];
+    tobiigaze_error_code error_code;
 
-    pthread_create(&th,NULL,&write,&things);
+    tobiigaze_get_connected_eye_tracker(url, urlSize, &error_code);
+    if (error_code) {
+        exit(-1);
+    }
+
+    eye_tracker = tobiigaze_create(url, &error_code);
+    things.tracker = eye_tracker;
+
+    tobiigaze_set_logging("gazelog.log", TOBIIGAZE_LOG_LEVEL_DEBUG, &error_code);
+    tobiigaze_run_event_loop_on_internal_thread(eye_tracker, 0, 0);
+    tobiigaze_connect(eye_tracker, &error_code);
+
+   // pthread_create(&th,NULL,&write,&things);
+    tobiigaze_start_tracking(eye_tracker, &on_gaze_data, &error_code, &things);
     pthread_create(&th,NULL,&read,&things);
 }
 
@@ -33,55 +43,49 @@ void Tobii::stop()
 {
     qDebug() << "Stop the device";
 
-    pthread_mutex_unlock(&things.mt);
-    pthread_join(th,NULL);
+    tobiigaze_stop_tracking(eye_tracker, &error_code);
+    tobiigaze_disconnect(eye_tracker);
+    tobiigaze_break_event_loop(eye_tracker);
+    tobiigaze_destroy(eye_tracker);
+
+   // qDebug() << "When I stop I left the following " << things.data_list.size() << "in size.";
 }
 
-void *Tobii::write(void *arg)
+void Tobii::on_gaze_data(const tobiigaze_gaze_data* gazedata, const tobiigaze_gaze_data_extensions* extensions, void *user_data)
 {
-    struct stuff *args = (struct stuff *)arg;
-    int i = 0;
-    while(needQuit(&args->mt) == 0) {
-        *&args->data_list += i;
-        i++;
-        usleep(34000);
- //       qDebug() << "Writing see the data list as " << args->data_list.size() << "in size.";
+    struct stuff *args = (struct stuff *)user_data;
+   // qDebug() << "On Gaze see the data list as " << args->data_list.size() << "in size.";
+    float right_openness = 0;
+    //qDebug() << "Inside the loop";
+    for (int i = 0; i < (int)extensions->actual_size; ++i) {
+        tobiigaze_error_code ec;
+            if(extensions->extensions[i].column_id == RIGHT_OPENNESS_COLUMN_ID) {
+                right_openness = tobiigaze_gaze_data_extension_to_float(&extensions->extensions[i], &ec);
+            }
     }
-    return 0;
+
+    *&args->data_list += right_openness;
 }
 
 void *Tobii::read(void *arg)
 {
    struct stuff *args = (struct stuff *)arg;
-   QList<int> segment;
-   while(needQuit(&args->mt) == 0) {
-       while (!args->data_list.isEmpty() && segment.size() < 30) {
-           segment += args->data_list.takeFirst();
+   QList<float> segment;
+   while (tobiigaze_is_connected(args->tracker)) {
+         if (!args->data_list.isEmpty()) {
+            segment += args->data_list.takeFirst();
 
-           if (segment.size() == 30) {
-               args->fatigue->calculate(segment);
-               segment.clear();
-           }
-       }
-      // qDebug() << "Reading see the segment as " << segment.size() << "in size.";
+         if (segment.size() == 30) {
+            args->fatigue->calculate(segment);
+            segment.clear();
+         }
+        }
    }
+
+   if (!segment.isEmpty())
+        args->fatigue->calculate(segment);
+
+  // qDebug() << "I am about to end";
+   pthread_exit(NULL);
    return 0;
-}
-
-/* Returns 1 (true) if the mutex is unlocked, which is the
- * thread's signal to terminate.
- */
-int Tobii::needQuit(pthread_mutex_t *mtx)
-{
-
-  int val = pthread_mutex_trylock(mtx);
-
-  switch(val) {
-    case 0: /* if we got the lock, unlock and return 1 (true) */
-      pthread_mutex_unlock(mtx);
-      return 1;
-    case EBUSY: /* return 0 (false) if the mutex was locked */
-      return 0;
-  }
-  return 1;
 }
